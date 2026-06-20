@@ -1,0 +1,11 @@
+if __name__ == "__main__":
+    qce = MultimodalQCE()
+    state = qce.forward(text="Does causing harm now create future obligations over time?")
+    outputs = generate_from_qce_state(state)
+
+    print("=== TEXT ===")
+    print(outputs["text"])
+    print("\n=== CODE ===")
+    print(outputs["code"])
+    print("\n=== IMAGE PROMPT ===")
+    print(outputs["image_prompt"])
