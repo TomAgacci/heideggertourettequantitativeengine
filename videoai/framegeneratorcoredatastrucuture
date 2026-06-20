@@ -1,0 +1,19 @@
+from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
+import numpy as np
+
+@dataclass
+class FrameSpec:
+    t: int
+    A: float
+    B: float
+    C: float
+    x_star: Optional[float]
+    y_star: Optional[float]
+    checks: Optional[HeideggerChecks]
+    image_prompt: str
+
+@dataclass
+class VideoSpec:
+    hypothesis: str
+    frames: List[FrameSpec]
