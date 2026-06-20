@@ -1,0 +1,67 @@
+class MultimodalQCEWithHarmonic:
+    def __init__(self):
+        # define which features go into the harmonic layer
+        self.harmonic_feature_names = [
+            "text_length",
+            "text_word_count",
+            "img_entropy",
+            "img_edge_density",
+            "img_complexity"
+        ]
+        self.harmonic_layer = HarmonicLayer(self.harmonic_feature_names)
+        self.curvature = CurvatureLayer()
+        self.field = FieldLayer()
+        self.htq_engine = HeideggerTouretteQuantitativeEngineExtended()
+        self.htq_layer = HeideggerTouretteLayer(self.htq_engine)
+
+    def extract_text_features(self, text: str) -> Dict[str, float]:
+        return {
+            "text_length": float(len(text)),
+            "text_word_count": float(len(text.split()))
+        }
+
+    def extract_image_features(self, image_path: str | None) -> Dict[str, float]:
+        if image_path is None:
+            return {
+                "img_entropy": 0.0,
+                "img_edge_density": 0.0,
+                "img_complexity": 0.0
+            }
+        # placeholder; plug in real CV later
+        return {
+            "img_entropy": 3.0,
+            "img_edge_density": 0.2,
+            "img_complexity": 10.0
+        }
+
+    def forward(self, text: str | None = None, image_path: str | None = None) -> Dict[str, Any]:
+        text_feats = self.extract_text_features(text) if text else {
+            "text_length": 0.0,
+            "text_word_count": 0.0
+        }
+        img_feats = self.extract_image_features(image_path)
+
+        # merge for harmonic layer
+        merged_feats = {**text_feats, **img_feats}
+
+        # harmonic pass
+        h_state = self.harmonic_layer.forward(merged_feats)
+
+        # you can feed harmonic coordinates into curvature/field later
+        c_state = self.curvature.forward({"harmonic_repr": h_state})
+        f_state = self.field.forward(c_state)
+
+        # build QCEFeatures for HTQ layer (if you want to keep that interface)
+        qce_features = QCEFeatures(
+            text_features=text_feats,
+            image_features=img_feats
+        )
+
+        htq_state = self.htq_layer.forward(qce_features, c_state, text)
+
+        return {
+            "harmonic_state": h_state,
+            "curvature_state": c_state,
+            "field_state": f_state,
+            "htq_state": htq_state
+        }
