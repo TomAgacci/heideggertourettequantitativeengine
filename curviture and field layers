@@ -1,0 +1,63 @@
+import numpy as np
+from dataclasses import dataclass
+from typing import Any
+
+@dataclass
+class CurvatureState:
+    f_hat: np.ndarray          # input harmonic coords
+    C_f_hat: np.ndarray        # curvature operator output
+    alpha: float               # curvature strength
+
+@dataclass
+class FieldState:
+    trajectory: np.ndarray     # shape (T, n): time steps of f_hat
+    step_size: float
+    steps: int
+    alpha: float
+
+
+class CurvatureLayer:
+    def __init__(self, alpha: float = 0.1):
+        self.alpha = alpha
+
+    def curvature_operator(self, f_hat: np.ndarray) -> np.ndarray:
+        """
+        C(f_hat) = f_hat + 2*alpha * f_hat^3  (elementwise)
+        """
+        return f_hat + 2.0 * self.alpha * (f_hat ** 3)
+
+    def forward(self, harmonic_state: Any) -> CurvatureState:
+        f_hat = harmonic_state.f_hat
+        C_f_hat = self.curvature_operator(f_hat)
+        return CurvatureState(
+            f_hat=f_hat,
+            C_f_hat=C_f_hat,
+            alpha=self.alpha
+        )
+
+
+class FieldLayer:
+    def __init__(self, step_size: float = 0.05, steps: int = 50, alpha: float = 0.1):
+        self.step_size = step_size
+        self.steps = steps
+        self.alpha = alpha
+
+    def curvature_operator(self, f_hat: np.ndarray) -> np.ndarray:
+        return f_hat + 2.0 * self.alpha * (f_hat ** 3)
+
+    def forward(self, curvature_state: CurvatureState) -> FieldState:
+        f_hat = curvature_state.f_hat.copy()
+        traj = [f_hat.copy()]
+
+        for _ in range(self.steps):
+            C_f = self.curvature_operator(f_hat)
+            f_hat = f_hat - self.step_size * C_f
+            traj.append(f_hat.copy())
+
+        trajectory = np.stack(traj, axis=0)
+        return FieldState(
+            trajectory=trajectory,
+            step_size=self.step_size,
+            steps=self.steps,
+            alpha=self.alpha
+        )
