@@ -1,0 +1,121 @@
+import math
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+
+# ---------- Data structures ----------
+
+@dataclass
+class HTQExtendedParams:
+    A: float
+    B: float
+    C: float
+    ethics_weight: float
+    causality_weight: float
+    temporal_weight: float
+
+@dataclass
+class HTQOutcome:
+    x_roots: List[float]
+    y_roots: List[float]
+    discriminant: float
+
+@dataclass
+class HeideggerChecks:
+    ethics: float
+    causality: float
+    temporal: float
+    overall: float
+
+
+# ---------- Content → parameters encoding ----------
+
+ETHICS_WORDS = {"harm", "hurt", "violence", "care", "duty", "obligation", "rights"}
+CAUSAL_WORDS = {"cause", "effect", "lead", "because", "result", "trigger"}
+TEMPORAL_WORDS = {"before", "after", "later", "earlier", "future", "past", "time", "eventually"}
+
+def encode_hypothesis_to_extended_params(hypothesis: str) -> HTQExtendedParams:
+    text = hypothesis.lower()
+
+    vowels = set("aeiou")
+    vowel_count = sum(1 for ch in text if ch in vowels)
+    consonant_count = sum(1 for ch in text if ch.isalpha() and ch not in vowels)
+    length = len(text)
+
+    A = float(max(1, length))
+    B = float(max(1, vowel_count))
+    C = float(max(1, consonant_count))
+
+    tokens = [t.strip(".,?!;:()\"'") for t in text.split()]
+    ethics_hits = sum(1 for t in tokens if t in ETHICS_WORDS)
+    causal_hits = sum(1 for t in tokens if t in CAUSAL_WORDS)
+    temporal_hits = sum(1 for t in tokens if t in TEMPORAL_WORDS)
+
+    def w(count: int) -> float:
+        return 1.0 + min(count, 4)
+
+    ethics_weight = w(ethics_hits)
+    causality_weight = w(causal_hits)
+    temporal_weight = w(temporal_hits)
+
+    return HTQExtendedParams(
+        A=A, B=B, C=C,
+        ethics_weight=ethics_weight,
+        causality_weight=causality_weight,
+        temporal_weight=temporal_weight
+    )
+
+
+# ---------- Heidegger–Tourette engine ----------
+
+class HeideggerTouretteQuantitativeEngineExtended:
+    def fixed_points(self, params: HTQExtendedParams) -> HTQOutcome:
+        A, B, C = params.A, params.B, params.C
+        a = 1.0 + A
+        b = -A * C
+        c = B
+        D = b*b - 4*a*c
+        if D < 0:
+            return HTQOutcome([], [], D)
+        sqrtD = math.sqrt(D)
+        x1 = (-b + sqrtD) / (2*a)
+        x2 = (-b - sqrtD) / (2*a)
+        y1 = C - x1
+        y2 = C - x2
+        return HTQOutcome([x1, x2], [y1, y2], D)
+
+    def choose_outcome(self, outcome: HTQOutcome, params: HTQExtendedParams) -> Optional[Tuple[float, float]]:
+        if not outcome.x_roots:
+            return None
+        candidates = list(zip(outcome.x_roots, outcome.y_roots))
+
+        def score(p):
+            x, y = p
+            base_energy = x**2 + y**2
+            ethics_term = params.ethics_weight * abs(y)
+            causal_term = params.causality_weight * abs(x)
+            temporal_term = params.temporal_weight * abs(x - y)
+            return base_energy + ethics_term + causal_term + temporal_term
+
+        return min(candidates, key=score)
+
+    def heidegger_checks(self, x: float, y: float, params: HTQExtendedParams) -> HeideggerChecks:
+        ethics_raw = 1.0 / (1.0 + params.ethics_weight * abs(y))
+        causality_raw = 1.0 / (1.0 + params.causality_weight * abs(x))
+        temporal_raw = 1.0 / (1.0 + params.temporal_weight * abs(x - y))
+        overall = (ethics_raw + causality_raw + temporal_raw) / 3.0
+        return HeideggerChecks(
+            ethics=ethics_raw,
+            causality=causality_raw,
+            temporal=temporal_raw,
+            overall=overall
+        )
+
+    def evaluate_hypothesis(self, hypothesis: str):
+        params = encode_hypothesis_to_extended_params(hypothesis)
+        outcome = self.fixed_points(params)
+        chosen = self.choose_outcome(outcome, params)
+        if chosen is None:
+            return params, outcome, None, None
+        x_star, y_star = chosen
+        checks = self.heidegger_checks(x_star, y_star, params)
+        return params, outcome, (x_star, y_star), checks
