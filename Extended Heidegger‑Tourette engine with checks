@@ -1,0 +1,64 @@
+class HeideggerTouretteQuantitativeEngineExtended:
+    def fixed_points(self, params: HTQExtendedParams) -> HTQOutcome:
+        A, B, C = params.A, params.B, params.C
+        a = 1.0 + A
+        b = -A * C
+        c = B
+        D = b*b - 4*a*c
+        if D < 0:
+            return HTQOutcome([], [], D)
+        sqrtD = math.sqrt(D)
+        x1 = (-b + sqrtD) / (2*a)
+        x2 = (-b - sqrtD) / (2*a)
+        y1 = C - x1
+        y2 = C - x2
+        return HTQOutcome([x1, x2], [y1, y2], D)
+
+    def choose_outcome(self, outcome: HTQOutcome, params: HTQExtendedParams) -> Optional[Tuple[float, float]]:
+        if not outcome.x_roots:
+            return None
+        candidates = list(zip(outcome.x_roots, outcome.y_roots))
+
+        def score(p):
+            x, y = p
+            base_energy = x**2 + y**2
+            ethics_term = params.ethics_weight * abs(y)
+            causal_term = params.causality_weight * abs(x)
+            temporal_term = params.temporal_weight * abs(x - y)
+            return base_energy + ethics_term + causal_term + temporal_term
+
+        return min(candidates, key=score)
+
+    # ---------- Heidegger checks on a chosen outcome ----------
+
+    def heidegger_checks(self, x: float, y: float, params: HTQExtendedParams) -> HeideggerChecks:
+        # Ethics: smaller |y| is better (less "ethical tension"), scaled by ethics_weight
+        ethics_raw = 1.0 / (1.0 + params.ethics_weight * abs(y))
+
+        # Causality: smaller |x| is better (less "causal overload"), scaled by causality_weight
+        causality_raw = 1.0 / (1.0 + params.causality_weight * abs(x))
+
+        # Temporal: smaller |x - y| is better (less temporal mismatch), scaled by temporal_weight
+        temporal_raw = 1.0 / (1.0 + params.temporal_weight * abs(x - y))
+
+        # Normalize to [0,1] (they already are), aggregate as mean
+        overall = (ethics_raw + causality_raw + temporal_raw) / 3.0
+
+        return HeideggerChecks(
+            ethics=ethics_raw,
+            causality=causality_raw,
+            temporal=temporal_raw,
+            overall=overall
+        )
+
+    # ---------- Full pipeline for a hypothesis ----------
+
+    def evaluate_hypothesis(self, hypothesis: str) -> Tuple[HTQExtendedParams, HTQOutcome, Optional[Tuple[float, float]], Optional[HeideggerChecks]]:
+        params = encode_hypothesis_to_extended_params(hypothesis)
+        outcome = self.fixed_points(params)
+        chosen = self.choose_outcome(outcome, params)
+        if chosen is None:
+            return params, outcome, None, None
+        x_star, y_star = chosen
+        checks = self.heidegger_checks(x_star, y_star, params)
+        return params, outcome, chosen, checks
