@@ -1,0 +1,20 @@
+def compare_hypotheses(
+    engine: HeideggerTouretteQuantitativeEngine,
+    hypotheses: Iterable[str],
+    criterion: str = "min_abs"
+):
+    scored = []
+    for h in hypotheses:
+        result = engine.evaluate_hypothesis(h, criterion=criterion)
+        if result.chosen_outcome is None:
+            continue
+        x_star, y_star = result.chosen_outcome
+        energy = x_star**2 + y_star**2
+        scored.append((h, result.params, x_star, y_star, energy))
+
+    scored.sort(key=lambda r: r[4])  # sort by energy
+
+    print(f"{'Hypothesis':50} | {'Energy':>10} | {'x*':>10} {'y*':>10}")
+    print("-" * 90)
+    for h, p, xs, ys, E in scored:
+        print(f"{h[:50]:50} | {E:10.4f} | {xs:10.4f} {ys:10.4f}")
