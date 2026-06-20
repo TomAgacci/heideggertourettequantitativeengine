@@ -1,0 +1,10 @@
+engine = HeideggerTouretteQuantitativeEngine()
+
+hypotheses = [
+    "Are all women polyamorous?",
+    "Will this project succeed?",
+    "Is cooperation more stable than competition?",
+    "Does every action have a clear cause?"
+]
+
+outcome_table(engine, hypotheses)
