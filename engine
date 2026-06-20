@@ -1,0 +1,200 @@
+import math
+from dataclasses import dataclass
+from typing import List, Tuple, Optional, Dict, Any
+
+# -----------------------------
+# Data structures
+# -----------------------------
+
+@dataclass
+class HTQParams:
+    """
+    Parameters for the Heidegger Tourette Quantitative Engine.
+    A: distortion gain
+    B: reciprocal strength
+    C: translation constant
+    """
+    A: float
+    B: float
+    C: float
+
+@dataclass
+class HTQOutcome:
+    """
+    Stores all fixed-point solutions and the discriminant.
+    """
+    x_roots: List[float]
+    y_roots: List[float]
+    discriminant: float
+
+@dataclass
+class HTQResult:
+    """
+    High-level result for a given question/hypothesis.
+    """
+    question: str
+    params: HTQParams
+    all_outcomes: HTQOutcome
+    chosen_outcome: Optional[Tuple[float, float]]
+    criterion: str
+
+
+# -----------------------------
+# Core engine
+# -----------------------------
+
+class HeideggerTouretteQuantitativeEngine:
+    """
+    Heidegger Tourette Quantitative Engine (HTQE)
+
+    Quantitative fixed-point engine for the map:
+        F(x, y) = (A*y - B/x, C - x)
+
+    Fixed points satisfy:
+        x = A*y - B/x
+        y = C - x
+    which reduces to:
+        (1 + A)x^2 - A*C*x + B = 0
+    """
+
+    def __init__(self, default_criterion: str = "min_abs"):
+        self.default_criterion = default_criterion
+
+    # ---- Core math ----
+
+    def fixed_points(self, params: HTQParams) -> HTQOutcome:
+        """
+        Solve the fixed-point system for given parameters:
+            x = A*y - B/x
+            y = C - x
+
+        Returns all real fixed points (0, 1, or 2).
+        """
+        A, B, C = params.A, params.B, params.C
+
+        # Quadratic coefficients: (1 + A)x^2 - A*C*x + B = 0
+        a = 1.0 + A
+        b = -A * C
+        c = B
+
+        D = b * b - 4 * a * c  # discriminant
+
+        if D < 0:
+            # No real fixed points
+            return HTQOutcome(x_roots=[], y_roots=[], discriminant=D)
+
+        sqrtD = math.sqrt(D)
+
+        x1 = (-b + sqrtD) / (2 * a)
+        x2 = (-b - sqrtD) / (2 * a)
+
+        y1 = C - x1
+        y2 = C - x2
+
+        return HTQOutcome(
+            x_roots=[x1, x2],
+            y_roots=[y1, y2],
+            discriminant=D
+        )
+
+    def choose_outcome(
+        self,
+        outcome: HTQOutcome,
+        criterion: Optional[str] = None
+    ) -> Optional[Tuple[float, float]]:
+        """
+        Choose a single 'best' outcome according to a quantitative criterion.
+
+        Supported criteria:
+            - "min_abs": minimize |x| + |y|
+            - "min_energy": minimize x^2 + y^2
+        """
+        if not outcome.x_roots:
+            return None
+
+        crit = criterion or self.default_criterion
+        candidates = list(zip(outcome.x_roots, outcome.y_roots))
+
+        if crit == "min_abs":
+            return min(candidates, key=lambda p: abs(p[0]) + abs(p[1]))
+        elif crit == "min_energy":
+            return min(candidates, key=lambda p: p[0]**2 + p[1]**2)
+        else:
+            raise ValueError(f"Unknown criterion: {crit}")
+
+    # ---- Question / hypothesis interface ----
+
+    def encode_hypothesis_to_params(self, hypothesis: str) -> HTQParams:
+        """
+        Map a question/hypothesis (text) to numeric parameters (A, B, C).
+
+        This is a placeholder encoding. In a real system, you'd replace this
+        with a domain-specific mapping from hypothesis structure to numbers.
+        """
+        # Very simple toy encoding:
+        # - length of hypothesis -> A
+        # - vowel count -> B
+        # - consonant count -> C
+        text = hypothesis.lower()
+
+        vowels = set("aeiou")
+        vowel_count = sum(1 for ch in text if ch in vowels)
+        consonant_count = sum(1 for ch in text if ch.isalpha() and ch not in vowels)
+        length = len(text)
+
+        # Avoid degenerate zeros; add small offsets
+        A = float(max(1, length))
+        B = float(max(1, vowel_count))
+        C = float(max(1, consonant_count))
+
+        return HTQParams(A=A, B=B, C=C)
+
+    def evaluate_hypothesis(
+        self,
+        hypothesis: str,
+        criterion: Optional[str] = None
+    ) -> HTQResult:
+        """
+        Full pipeline:
+            1. Encode hypothesis -> (A, B, C)
+            2. Compute all fixed points
+            3. Choose a single 'best' outcome by criterion
+        """
+        params = self.encode_hypothesis_to_params(hypothesis)
+        all_outcomes = self.fixed_points(params)
+        chosen = self.choose_outcome(all_outcomes, criterion=criterion)
+
+        return HTQResult(
+            question=hypothesis,
+            params=params,
+            all_outcomes=all_outcomes,
+            chosen_outcome=chosen,
+            criterion=criterion or self.default_criterion
+        )
+
+
+# -----------------------------
+# Example usage
+# -----------------------------
+
+if __name__ == "__main__":
+    engine = HeideggerTouretteQuantitativeEngine(default_criterion="min_abs")
+
+    hypothesis = "Will event X naturally lead to outcome Y?"
+    result = engine.evaluate_hypothesis(hypothesis)
+
+    print("Question / Hypothesis:")
+    print(" ", result.question)
+    print("\nEncoded parameters (A, B, C):")
+    print(" ", result.params)
+
+    print("\nDiscriminant:", result.all_outcomes.discriminant)
+    print("All x roots:", result.all_outcomes.x_roots)
+    print("All y roots:", result.all_outcomes.y_roots)
+
+    if result.chosen_outcome is not None:
+        x_star, y_star = result.chosen_outcome
+        print(f"\nChosen outcome ({result.criterion}):")
+        print(" (x*, y*) =", (x_star, y_star))
+    else:
+        print("\nNo real fixed-point outcome for this hypothesis.")
