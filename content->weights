@@ -1,0 +1,37 @@
+ETHICS_WORDS = {"harm", "hurt", "violence", "care", "duty", "obligation", "rights"}
+CAUSAL_WORDS = {"cause", "effect", "lead", "because", "result", "trigger"}
+TEMPORAL_WORDS = {"before", "after", "later", "earlier", "future", "past", "time", "eventually"}
+
+def encode_hypothesis_to_extended_params(hypothesis: str) -> HTQExtendedParams:
+    text = hypothesis.lower()
+
+    # base A,B,C from structure
+    vowels = set("aeiou")
+    vowel_count = sum(1 for ch in text if ch in vowels)
+    consonant_count = sum(1 for ch in text if ch.isalpha() and ch not in vowels)
+    length = len(text)
+
+    A = float(max(1, length))
+    B = float(max(1, vowel_count))
+    C = float(max(1, consonant_count))
+
+    # content-based weights
+    tokens = [t.strip(".,?!;:()\"'") for t in text.split()]
+    ethics_hits = sum(1 for t in tokens if t in ETHICS_WORDS)
+    causal_hits = sum(1 for t in tokens if t in CAUSAL_WORDS)
+    temporal_hits = sum(1 for t in tokens if t in TEMPORAL_WORDS)
+
+    # normalize to something like [1, 5]
+    def w(count: int) -> float:
+        return 1.0 + min(count, 4)  # cap at 5
+
+    ethics_weight = w(ethics_hits)
+    causality_weight = w(causal_hits)
+    temporal_weight = w(temporal_hits)
+
+    return HTQExtendedParams(
+        A=A, B=B, C=C,
+        ethics_weight=ethics_weight,
+        causality_weight=causality_weight,
+        temporal_weight=temporal_weight
+    )
