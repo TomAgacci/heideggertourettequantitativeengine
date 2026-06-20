@@ -1,0 +1,17 @@
+if __name__ == "__main__":
+    engine = HeideggerTouretteQuantitativeEngineExtended()
+
+    hypothesis = "Does causing harm now create future obligations over time?"
+
+    params, outcome, chosen, checks = engine.evaluate_hypothesis(hypothesis)
+
+    text = generate_text_from_outcome(hypothesis, params, outcome, chosen, checks)
+    code = generate_code_from_outcome(hypothesis, params, chosen)
+    img_prompt = generate_image_prompt_from_outcome(hypothesis, params, chosen, checks)
+
+    print("=== TEXT OUTPUT ===")
+    print(text)
+    print("\n=== CODE OUTPUT ===")
+    print(code)
+    print("\n=== IMAGE PROMPT ===")
+    print(img_prompt)
