@@ -1,0 +1,35 @@
+def generate_code_from_outcome(hypothesis: str,
+                               params: HTQExtendedParams,
+                               chosen: Optional[Tuple[float, float]]) -> str:
+    if chosen is None:
+        return "# No real fixed point for this hypothesis; cannot generate a stable code model."
+
+    x_star, y_star = chosen
+
+    code = f'''"""
+Auto-generated model for hypothesis:
+    {hypothesis}
+Using Heidegger–Tourette Quantitative Engine.
+"""
+
+A = {params.A:.6f}
+B = {params.B:.6f}
+C = {params.C:.6f}
+
+x_star = {x_star:.10f}
+y_star = {y_star:.10f}
+
+def heidegger_tourette_map(x, y):
+    \"\"\"Distortion map F(x, y) = (A*y - B/x, C - x).\"\"\"
+    return A*y - B/x, C - x
+
+def fixed_point():
+    \"\"\"Return the precomputed fixed point (x*, y*).\"\"\"
+    return x_star, y_star
+
+if __name__ == "__main__":
+    print("Heidegger–Tourette fixed point for this hypothesis:")
+    print("x* =", x_star)
+    print("y* =", y_star)
+'''
+    return code
