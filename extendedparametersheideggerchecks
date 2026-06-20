@@ -1,0 +1,25 @@
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+import math
+
+@dataclass
+class HTQExtendedParams:
+    A: float
+    B: float
+    C: float
+    ethics_weight: float
+    causality_weight: float
+    temporal_weight: float
+
+@dataclass
+class HTQOutcome:
+    x_roots: List[float]
+    y_roots: List[float]
+    discriminant: float
+
+@dataclass
+class HeideggerChecks:
+    ethics: float       # [0,1] higher = better ethical coherence
+    causality: float    # [0,1] higher = better causal coherence
+    temporal: float     # [0,1] higher = better temporal coherence
+    overall: float      # aggregate
