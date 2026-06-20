@@ -1,0 +1,53 @@
+class MultimodalQCE:
+    def __init__(self):
+        self.harmonic = HarmonicLayer()
+        self.curvature = CurvatureLayer()
+        self.field = FieldLayer()
+        self.htq_engine = HeideggerTouretteQuantitativeEngineExtended()
+        self.htq_layer = HeideggerTouretteLayer(self.htq_engine)
+
+    # ---- feature extraction stubs ----
+
+    def extract_text_features(self, text: str) -> Dict[str, float]:
+        return {
+            "length": float(len(text)),
+            "word_count": float(len(text.split()))
+        }
+
+    def extract_image_features(self, image_path: Optional[str]) -> Dict[str, float]:
+        if image_path is None:
+            return {}
+        # placeholder: plug in your CV pipeline here
+        return {
+            "entropy": 3.0,
+            "edge_density": 0.2,
+            "complexity": 10.0
+        }
+
+    # ---- main forward pass ----
+
+    def forward(self, text: Optional[str] = None, image_path: Optional[str] = None) -> QCEGlobalState:
+        text_feats = self.extract_text_features(text) if text else {}
+        img_feats = self.extract_image_features(image_path)
+
+        features = QCEFeatures(text_features=text_feats, image_features=img_feats)
+
+        h_state = self.harmonic.forward(features)
+        c_state = self.curvature.forward(h_state)
+        f_state = self.field.forward(c_state)
+
+        core_state = QCECoreState(
+            harmonic_state=h_state,
+            curvature_state=c_state,
+            field_state=f_state
+        )
+
+        htq_state = self.htq_layer.forward(features, core_state, text)
+
+        return QCEGlobalState(
+            raw_text=text,
+            raw_image_path=image_path,
+            features=features,
+            core=core_state,
+            htq=htq_state
+        )
