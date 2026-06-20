@@ -1,0 +1,41 @@
+import cv2
+import numpy as np
+import math
+
+def extract_image_features(path):
+    img = cv2.imread(path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # A: color entropy
+    hist = cv2.calcHist([img],[0],None,[256],[0,256]).flatten()
+    p = hist / np.sum(hist)
+    entropy = -np.sum([v*np.log2(v) for v in p if v > 0])
+
+    # B: edge density
+    edges = cv2.Canny(gray, 100, 200)
+    edge_density = np.sum(edges > 0) / edges.size
+
+    # C: object complexity (simple contour count)
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    complexity = len(contours)
+
+    return entropy, edge_density, complexity
+
+
+def heidegger_tourette_outcome(A, B, C):
+    a = 1 + A
+    b = -A * C
+    c = B
+
+    D = b*b - 4*a*c
+    if D < 0:
+        return None
+
+    sqrtD = math.sqrt(D)
+    x1 = (-b + sqrtD) / (2*a)
+    x2 = (-b - sqrtD) / (2*a)
+
+    y1 = C - x1
+    y2 = C - x2
+
+    return (x1, y1), (x2, y2)
