@@ -1,0 +1,62 @@
+class QCEVideoFrameGenerator:
+    def __init__(self,
+                 harmonic_layer: HarmonicLayer,
+                 field_layer: FieldLayer,
+                 htq_engine: HeideggerTouretteQuantitativeEngineExtended):
+        self.harmonic_layer = harmonic_layer
+        self.field_layer = field_layer
+        self.htq_engine = htq_engine
+
+    def generate_video_spec(self, hypothesis: str,
+                            merged_features: Dict[str, float]) -> VideoSpec:
+        # 1) Harmonic state
+        h_state = self.harmonic_layer.forward(merged_features)
+
+        # 2) Field trajectory in harmonic space
+        curvature_state = CurvatureState(
+            f_hat=h_state.f_hat,
+            C_f_hat=self.field_layer.curvature_operator(h_state.f_hat),
+            alpha=self.field_layer.alpha
+        )
+        f_state = self.field_layer.forward(curvature_state)
+
+        frames: List[FrameSpec] = []
+
+        # 3) For each time step, build a frame
+        for t, f_hat_t in enumerate(f_state.trajectory):
+            # 3a) Compress to A,B,C
+            A, B, C = compress_harmonic_to_ABC(f_hat_t)
+
+            # 3b) Build HTQ params directly from A,B,C
+            params = HTQExtendedParams(
+                A=A, B=B, C=C,
+                ethics_weight=1.0,
+                causality_weight=1.0,
+                temporal_weight=1.0
+            )
+
+            outcome = self.htq_engine.fixed_points(params)
+            chosen = self.htq_engine.choose_outcome(outcome, params)
+
+            if chosen is not None:
+                x_star, y_star = chosen
+                checks = self.htq_engine.heidegger_checks(x_star, y_star, params)
+            else:
+                x_star = y_star = None
+                checks = None
+
+            # 3c) Image prompt for this frame
+            prompt = frame_image_prompt(hypothesis, A, B, C, x_star, y_star, checks)
+
+            frames.append(FrameSpec(
+                t=t,
+                A=A,
+                B=B,
+                C=C,
+                x_star=x_star,
+                y_star=y_star,
+                checks=checks,
+                image_prompt=prompt
+            ))
+
+        return VideoSpec(hypothesis=hypothesis, frames=frames)
