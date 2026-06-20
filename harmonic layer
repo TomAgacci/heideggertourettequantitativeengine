@@ -1,0 +1,53 @@
+import numpy as np
+from dataclasses import dataclass
+from typing import Dict, Any
+
+@dataclass
+class HarmonicState:
+    H: np.ndarray          # harmonic operator
+    eigenvalues: np.ndarray
+    eigenvectors: np.ndarray
+    f: np.ndarray          # original feature vector
+    f_hat: np.ndarray      # harmonic coordinates
+
+
+class HarmonicLayer:
+    def __init__(self, feature_names):
+        self.feature_names = list(feature_names)
+        self.n = len(self.feature_names)
+
+    def build_similarity_matrix(self, features: Dict[str, float]) -> np.ndarray:
+        """
+        Very simple similarity: W_ij = 1 if i != j, else 0.
+        You can replace this with something smarter (e.g. semantic or statistical similarity).
+        """
+        W = np.ones((self.n, self.n)) - np.eye(self.n)
+        return W
+
+    def build_harmonic_operator(self, features: Dict[str, float]) -> np.ndarray:
+        W = self.build_similarity_matrix(features)
+        d = np.sum(W, axis=1)
+        D = np.diag(d)
+        L = D - W
+        H = -L  # harmonic operator
+        return H
+
+    def forward(self, features: Dict[str, float]) -> HarmonicState:
+        # Build feature vector in fixed order
+        f = np.array([features.get(name, 0.0) for name in self.feature_names], dtype=float)
+
+        H = self.build_harmonic_operator(features)
+
+        # Spectral decomposition
+        eigenvalues, eigenvectors = np.linalg.eigh(H)
+
+        # Harmonic coordinates
+        f_hat = eigenvectors.T @ f
+
+        return HarmonicState(
+            H=H,
+            eigenvalues=eigenvalues,
+            eigenvectors=eigenvectors,
+            f=f,
+            f_hat=f_hat
+        )
