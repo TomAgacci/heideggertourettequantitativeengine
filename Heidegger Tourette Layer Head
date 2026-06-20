@@ -1,0 +1,29 @@
+class HeideggerTouretteLayer:
+    def __init__(self, engine):
+        self.engine = engine  # HeideggerTouretteQuantitativeEngineExtended
+
+    def features_to_params(self, features: QCEFeatures, text: Optional[str]) -> HTQExtendedParams:
+        # Option 1: use text content encoding (from before)
+        if text is not None:
+            return encode_hypothesis_to_extended_params(text)
+
+        # Option 2: derive A,B,C from image features if no text
+        A = float(features.image_features.get("entropy", 1.0))
+        B = float(features.image_features.get("edge_density", 1.0))
+        C = float(features.image_features.get("complexity", 1.0))
+        return HTQExtendedParams(
+            A=A, B=B, C=C,
+            ethics_weight=1.0,
+            causality_weight=1.0,
+            temporal_weight=1.0
+        )
+
+    def forward(self, features: QCEFeatures, core_state: QCECoreState, text: Optional[str]) -> HTQState:
+        params = self.features_to_params(features, text)
+        outcome = self.engine.fixed_points(params)
+        chosen = self.engine.choose_outcome(outcome, params)
+        checks = None
+        if chosen is not None:
+            x_star, y_star = chosen
+            checks = self.engine.heidegger_checks(x_star, y_star, params)
+        return HTQState(params=params, outcome=outcome, chosen=chosen, checks=checks)
