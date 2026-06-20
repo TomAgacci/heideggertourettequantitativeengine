@@ -1,0 +1,20 @@
+class HeideggerTouretteQuantitativeEngineExtended(HeideggerTouretteQuantitativeEngine):
+    def choose_outcome_extended(
+        self,
+        outcome: HTQOutcome,
+        params: HTQExtendedParams
+    ) -> Optional[Tuple[float, float]]:
+        if not outcome.x_roots:
+            return None
+
+        candidates = list(zip(outcome.x_roots, outcome.y_roots))
+
+        def score(p):
+            x, y = p
+            base_energy = x**2 + y**2
+            ethics_term = params.ethics_weight * abs(y)      # e.g. y as “ethical tension”
+            causal_term = params.causality_weight * abs(x)   # x as “causal load”
+            temporal_term = params.temporal_weight * abs(x-y)  # mismatch as temporal strain
+            return base_energy + ethics_term + causal_term + temporal_term
+
+        return min(candidates, key=score)
