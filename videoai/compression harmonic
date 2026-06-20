@@ -1,0 +1,18 @@
+def compress_harmonic_to_ABC(f_hat: np.ndarray) -> Tuple[float, float, float]:
+    n = len(f_hat)
+    if n == 0:
+        return 1.0, 1.0, 1.0
+
+    # simple 3-band split
+    i1 = n // 3
+    i2 = 2 * n // 3
+
+    low = f_hat[:i1]
+    mid = f_hat[i1:i2]
+    high = f_hat[i2:]
+
+    A = float(np.linalg.norm(low) + 1e-6)
+    B = float(np.linalg.norm(mid) + 1e-6)
+    C = float(np.linalg.norm(high) + 1e-6)
+
+    return A, B, C
