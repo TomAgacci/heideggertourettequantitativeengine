@@ -1,0 +1,31 @@
+def generate_text_from_outcome(hypothesis: str,
+                               params: HTQExtendedParams,
+                               outcome: HTQOutcome,
+                               chosen: Optional[Tuple[float, float]],
+                               checks: Optional[HeideggerChecks]) -> str:
+    if chosen is None or checks is None:
+        return f"For hypothesis: '{hypothesis}', the engine found no real fixed-point outcome."
+
+    x_star, y_star = chosen
+
+    lines = []
+    lines.append(f"Hypothesis: {hypothesis}")
+    lines.append("")
+    lines.append("Heidegger–Tourette quantitative summary:")
+    lines.append(f"  Parameters: A={params.A:.2f}, B={params.B:.2f}, C={params.C:.2f}")
+    lines.append(f"  Chosen fixed point: x*={x_star:.4f}, y*={y_star:.4f}")
+    lines.append("")
+    lines.append("Heidegger checks (0–1, higher is better):")
+    lines.append(f"  Ethics coherence   : {checks.ethics:.3f}")
+    lines.append(f"  Causal coherence   : {checks.causality:.3f}")
+    lines.append(f"  Temporal coherence : {checks.temporal:.3f}")
+    lines.append(f"  Overall disclosure : {checks.overall:.3f}")
+    lines.append("")
+    if checks.overall > 0.7:
+        lines.append("Interpretation: The hypothesis forms a highly coherent, well-structured scenario under this engine.")
+    elif checks.overall > 0.4:
+        lines.append("Interpretation: The hypothesis has mixed coherence; some aspects fit, others are strained.")
+    else:
+        lines.append("Interpretation: The hypothesis is quantitatively unstable or poorly structured in this framing.")
+
+    return "\n".join(lines)
