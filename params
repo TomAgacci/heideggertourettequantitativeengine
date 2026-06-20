@@ -1,0 +1,2 @@
+params = engine.encode_hypothesis_to_params("Are all women polyamorous?")
+visualize_distortion_field(params, x_range=(-5, 20), y_range=(-5, 20))
