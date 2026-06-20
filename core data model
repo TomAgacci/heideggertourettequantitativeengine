@@ -1,0 +1,28 @@
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Tuple, List
+
+@dataclass
+class QCEFeatures:
+    text_features: Dict[str, float]
+    image_features: Dict[str, float]
+
+@dataclass
+class QCECoreState:
+    harmonic_state: Any
+    curvature_state: Any
+    field_state: Any
+
+@dataclass
+class HTQState:
+    params: Any
+    outcome: Any
+    chosen: Optional[Tuple[float, float]]
+    checks: Any
+
+@dataclass
+class QCEGlobalState:
+    raw_text: Optional[str]
+    raw_image_path: Optional[str]
+    features: QCEFeatures
+    core: QCECoreState
+    htq: HTQState
