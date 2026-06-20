@@ -1,0 +1,14 @@
+class HarmonicLayer:
+    def forward(self, features: QCEFeatures) -> Any:
+        # e.g. spectral transforms, PCA, Fourier-like structures
+        return {"harmonic_repr": features}
+
+class CurvatureLayer:
+    def forward(self, harmonic_state: Any) -> Any:
+        # e.g. nonlinear mappings, constraints, curvature fields
+        return {"curvature_repr": harmonic_state}
+
+class FieldLayer:
+    def forward(self, curvature_state: Any) -> Any:
+        # e.g. interactions, potentials, flows
+        return {"field_repr": curvature_state}
