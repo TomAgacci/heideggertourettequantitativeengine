@@ -1,0 +1,24 @@
+from typing import Iterable
+
+def outcome_table(
+    engine: HeideggerTouretteQuantitativeEngine,
+    hypotheses: Iterable[str],
+    criterion: str = "min_abs"
+):
+    rows = []
+    for h in hypotheses:
+        result = engine.evaluate_hypothesis(h, criterion=criterion)
+        if result.chosen_outcome is None:
+            rows.append((h, result.params, None, None))
+        else:
+            x_star, y_star = result.chosen_outcome
+            rows.append((h, result.params, x_star, y_star))
+
+    # Pretty print
+    print(f"{'Hypothesis':50} | {'A':>6} {'B':>6} {'C':>6} | {'x*':>12} {'y*':>12}")
+    print("-" * 100)
+    for h, p, xs, ys in rows:
+        if xs is None:
+            print(f"{h[:50]:50} | {p.A:6.1f} {p.B:6.1f} {p.C:6.1f} | {'NO REAL FP':>12} {'':>12}")
+        else:
+            print(f"{h[:50]:50} | {p.A:6.1f} {p.B:6.1f} {p.C:6.1f} | {xs:12.4f} {ys:12.4f}")
