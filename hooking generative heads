@@ -1,0 +1,16 @@
+def generate_from_qce_state(state: QCEGlobalState) -> Dict[str, str]:
+    text = state.raw_text or "<no text>"
+    params = state.htq.params
+    outcome = state.htq.outcome
+    chosen = state.htq.chosen
+    checks = state.htq.checks
+
+    text_out = generate_text_from_outcome(text, params, outcome, chosen, checks)
+    code_out = generate_code_from_outcome(text, params, chosen)
+    img_prompt = generate_image_prompt_from_outcome(text, params, chosen, checks)
+
+    return {
+        "text": text_out,
+        "code": code_out,
+        "image_prompt": img_prompt
+    }
