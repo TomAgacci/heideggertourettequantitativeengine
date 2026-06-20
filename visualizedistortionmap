@@ -1,0 +1,26 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def visualize_distortion_field(params: HTQParams, x_range, y_range, density=20):
+    A, B, C = params.A, params.B, params.C
+
+    xs = np.linspace(*x_range, density)
+    ys = np.linspace(*y_range, density)
+    X, Y = np.meshgrid(xs, ys)
+
+    # F(x,y) = (A*y - B/x, C - x)
+    Fx = A*Y - B/np.where(X == 0, 1e-9, X)
+    Fy = C - X
+
+    U = Fx - X  # delta x
+    V = Fy - Y  # delta y
+
+    plt.figure(figsize=(6, 6))
+    plt.quiver(X, Y, U, V, angles='xy')
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.axvline(0, color='black', linewidth=0.5)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Heidegger–Tourette Distortion Field")
+    plt.gca().set_aspect('equal', 'box')
+    plt.show()
