@@ -1,0 +1,27 @@
+def generate_image_prompt_from_outcome(hypothesis: str,
+                                       params: HTQExtendedParams,
+                                       chosen: Optional[Tuple[float, float]],
+                                       checks: Optional[HeideggerChecks]) -> str:
+    if chosen is None or checks is None:
+        return ("Abstract image of instability and fragmentation, "
+                "representing a hypothesis with no coherent fixed point.")
+
+    x_star, y_star = chosen
+
+    mood = "balanced, harmonious scene" if checks.overall > 0.7 else \
+           "tense, ambiguous scene" if checks.overall > 0.4 else \
+           "chaotic, dissonant scene"
+
+    ethics_tone = "gentle, caring interactions" if checks.ethics > 0.6 else \
+                  "morally conflicted interactions"
+    causal_tone = "clear chains of cause and effect" if checks.causality > 0.6 else \
+                  "uncertain or broken causal links"
+    temporal_tone = "smooth flow of time" if checks.temporal > 0.6 else \
+                    "fragmented or looping time motifs"
+
+    prompt = (
+        f"{mood}, inspired by the hypothesis: '{hypothesis}'. "
+        f"Visualize {ethics_tone}, with {causal_tone}, and {temporal_tone}. "
+        f"Subtly encode the fixed point ({x_star:.2f}, {y_star:.2f}) as geometric or spatial balance."
+    )
+    return prompt
